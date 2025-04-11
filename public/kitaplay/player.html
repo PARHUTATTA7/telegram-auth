@@ -2,175 +2,228 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KitaPlay Player</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.12.5/controls.min.css" crossorigin="anonymous">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.12.5/shaka-player.compiled.js" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.12.5/shaka-player.ui.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.3.5/dist/shaka-player.ui.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.3.5/dist/controls.min.css">
   <style>
     body {
       margin: 0;
       background: #000;
-      font-family: Arial, sans-serif;
+      overflow: hidden;
     }
     #video-container {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
-      height: 100vh;
-      position: relative;
+      height: 100%;
     }
-    #error-message {
-      color: red;
-      padding: 20px;
-      text-align: center;
+    #error-display {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
+      color: white;
+      background: rgba(0,0,0,0.8);
+      padding: 20px;
+      border-radius: 5px;
       display: none;
       z-index: 100;
-      background: rgba(0,0,0,0.8);
+      max-width: 80%;
+      text-align: center;
     }
     video {
       width: 100%;
       height: 100%;
+      object-fit: contain;
     }
   </style>
 </head>
 <body>
   <div id="video-container">
-    <video id="video" autoplay controls data-shaka-player></video>
-    <div id="error-message"></div>
+    <video id="video" autoplay controls></video>
+    <div id="error-display"></div>
   </div>
 
   <script>
-    // Video sources configuration
-    const VIDEO_SOURCES = {
-      sss: {
-        url: "https://fta4-cdn-flr.visionplus.id/out/v1/6f5596513af749c19d0bcdac013dda3c/index.mpd",
-        drm: {
-          clearKeys: {
-            "7faf299c35d84c57ba6cf3578df1e0cc": "636537eab0d3f7c395721811fd3861c5"
+    // Strict validation to catch undefined issues early
+    'use strict';
+
+    // Configuration with fallbacks
+    const APP_CONFIG = {
+      sources: {
+        sss: {
+          url: "https://fta4-cdn-flr.visionplus.id/out/v1/6f5596513af749c19d0bcdac013dda3c/index.mpd",
+          drm: {
+            clearKeys: {
+              "7faf299c35d84c57ba6cf3578df1e0cc": "636537eab0d3f7c395721811fd3861c5"
+            }
           }
         }
-      }
-    };
-
-    // Initialize when DOM is loaded
-    document.addEventListener('DOMContentLoaded', initPlayer);
-
-    async function initPlayer() {
-      try {
-        const videoData = getVideoDataFromURL();
-        if (!videoData) return;
-        
-        await initShakaPlayer(videoData);
-      } catch (error) {
-        showError(error.message || 'Failed to initialize player');
-        console.error("Initialization error:", error);
-      }
-    }
-
-    function getVideoDataFromURL() {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const id = params.get('id');
-        
-        if (!id) {
-          showError('No video ID specified in URL');
-          return null;
-        }
-        
-        if (!VIDEO_SOURCES[id]) {
-          showError(`Video source not found for ID: ${id}`);
-          return null;
-        }
-        
-        return VIDEO_SOURCES[id];
-      } catch (error) {
-        showError('Error processing URL parameters');
-        console.error("URL processing error:", error);
-        return null;
-      }
-    }
-
-    async function initShakaPlayer(videoData) {
-      // Check if Shaka Player is loaded
-      if (typeof shaka === 'undefined') {
-        throw new Error('Shaka Player library failed to load');
-      }
-
-      // Install polyfills
-      shaka.polyfill.installAll();
-
-      // Check browser support
-      if (!shaka.Player.isBrowserSupported()) {
-        throw new Error('Browser not supported for playback');
-      }
-
-      const videoElement = document.getElementById('video');
-      const player = new shaka.Player(videoElement);
-      
-      // Initialize UI
-      const ui = new shaka.ui.Overlay(
-        player,
-        videoElement,
-        document.getElementById('video-container')
-      );
-
-      // Error handling
-      player.addEventListener('error', (event) => {
-        handlePlayerError(event.detail);
-      });
-
-      // Configure player
-      player.configure({
-        drm: videoData.drm,
+      },
+      playerConfig: {
         streaming: {
           bufferingGoal: 60,
           rebufferingGoal: 2
         }
-      });
+      }
+    };
 
-      // Try to load the video
+    // Main initialization flow
+    document.addEventListener('DOMContentLoaded', async () => {
       try {
-        await player.load(videoData.url);
-        console.log('Video loaded successfully');
+        // Verify Shaka is loaded
+        if (typeof shaka === 'undefined') {
+          throw new Error('Shaka Player library failed to load');
+        }
+
+        // Get video source
+        const videoSource = getVideoSource();
+        if (!videoSource) return;
+
+        // Initialize player
+        await initializePlayer(videoSource);
       } catch (error) {
-        throw new Error(`Failed to load video: ${error.message}`);
+        showError(formatErrorMessage(error));
+        console.error('Initialization failed:', error);
+      }
+    });
+
+    // Safe URL parameter parsing
+    function getVideoSource() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id') || '';
+
+        if (!id.trim()) {
+          showError('No video ID specified in URL');
+          return null;
+        }
+
+        const source = APP_CONFIG.sources[id];
+        if (!source) {
+          showError(`Video source not found for ID: ${id}`);
+          return null;
+        }
+
+        // Validate source structure
+        if (!source.url || typeof source.url !== 'string') {
+          showError('Invalid video URL configuration');
+          return null;
+        }
+
+        return source;
+      } catch (error) {
+        showError('Failed to process URL parameters');
+        console.error('URL processing error:', error);
+        return null;
       }
     }
 
+    // Player initialization with all safeguards
+    async function initializePlayer(videoSource) {
+      // Install polyfills
+      shaka.polyfill.installAll();
+
+      // Verify browser support
+      if (!shaka.Player.isBrowserSupported()) {
+        throw new Error('Your browser does not support the required playback features');
+      }
+
+      // Get video element safely
+      const videoElement = document.getElementById('video');
+      if (!videoElement) {
+        throw new Error('Video element not found in page');
+      }
+
+      // Create player instance
+      const player = new shaka.Player(videoElement);
+      const ui = new shaka.ui.Overlay(player, videoElement, document.getElementById('video-container'));
+
+      // Configure error handling
+      player.addEventListener('error', (event) => {
+        handlePlayerError(event.detail);
+      });
+
+      // Apply configurations safely
+      try {
+        player.configure(APP_CONFIG.playerConfig);
+        
+        // Only configure DRM if it exists
+        if (videoSource.drm && typeof videoSource.drm === 'object') {
+          player.configure({
+            drm: videoSource.drm
+          });
+        }
+
+        // Validate manifest URL before loading
+        if (!isValidUrl(videoSource.url)) {
+          throw new Error('Invalid video URL format');
+        }
+
+        // Load the manifest
+        await player.load(videoSource.url);
+        console.log('Playback successfully initialized');
+      } catch (error) {
+        throw new Error(`Failed to initialize playback: ${error.message}`);
+      }
+    }
+
+    // Enhanced error handling
     function handlePlayerError(error) {
-      let errorMessage = `Playback Error (${error.code}): `;
+      let message = 'Playback Error: ';
       
-      // Specific error messages for common cases
-      switch (error.code) {
-        case shaka.util.Error.Code.BAD_DRM_CONFIG:
-          errorMessage += "DRM configuration error - please check your keys";
-          break;
-        case shaka.util.Error.Code.REQUESTED_KEY_SYSTEM_CONFIG_UNAVAILABLE:
-          errorMessage += "DRM system not available in this browser";
-          break;
-        case shaka.util.Error.Code.UNABLE_TO_GUESS_MANIFEST_TYPE:
-          errorMessage += "Invalid video URL or format";
-          break;
-        default:
-          errorMessage += error.message || "Unknown playback error";
+      // Handle specific Shaka error codes
+      if (error.code && error.severity) {
+        message += `[${error.code}] `;
+        
+        switch (error.code) {
+          case 1000: // SHAKA.ASSERTION_FAILED
+            message += 'Internal player error';
+            break;
+          case 1002: // SHAKA.Player.Error.Code.BAD_DRM_CONFIG
+            message += 'DRM configuration error - please verify your keys';
+            break;
+          case 6001: // SHAKA.Player.Error.Code.UNABLE_TO_GUESS_MANIFEST_TYPE
+            message += 'Unsupported video format';
+            break;
+          default:
+            message += error.message || 'Unknown playback error';
+        }
+      } else {
+        message += error.message || 'Unknown error occurred';
       }
       
-      showError(errorMessage);
-      console.error("Player error:", error);
+      showError(message);
+      console.error('Player error:', error);
+    }
+
+    // Helper functions
+    function isValidUrl(string) {
+      try {
+        new URL(string);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function formatErrorMessage(error) {
+      if (error instanceof Error) {
+        return error.message;
+      }
+      return String(error);
     }
 
     function showError(message) {
-      const errorElement = document.getElementById('error-message');
-      if (errorElement) {
-        errorElement.innerHTML = `
+      const errorDisplay = document.getElementById('error-display');
+      if (errorDisplay) {
+        errorDisplay.innerHTML = `
           <h3>Error Loading Content</h3>
           <p>${message}</p>
-          <p>Please try again or contact support.</p>
+          <p>Please try refreshing the page or contact support.</p>
         `;
-        errorElement.style.display = 'block';
+        errorDisplay.style.display = 'block';
       }
     }
   </script>
