@@ -1,3 +1,8 @@
-name = "postpsn"
-compatibility_date = "2025-04-10"
-pages_build_output_dir = "./public"
+name = "kitaplay"
+compatibility_date = "2024-04-11"
+
+[site]
+bucket = "./public"
+
+[functions]
+directory = "./functions"
