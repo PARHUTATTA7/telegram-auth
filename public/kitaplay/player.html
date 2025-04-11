@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Shaka Player</title>
+  <title>KitaPlay Player</title>
   <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.3.5/dist/shaka-player.ui.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.3.5/dist/controls.min.css">
   <style>
@@ -12,28 +12,133 @@
       padding: 0;
       background: black;
       color: white;
+      font-family: Arial, sans-serif;
     }
     #video-container {
       width: 100%;
-      height: 80vh;
+      height: 100%;
       position: relative;
     }
     #error-message {
       color: red;
       padding: 20px;
       text-align: center;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: none;
+    }
+    .shaka-video {
+      width: 100%;
+      height: 100%;
     }
   </style>
 </head>
 <body>
   <div id="video-container">
-    <video id="video" autoplay controls></video>
+    <video id="video" autoplay controls class="shaka-video"></video>
     <div id="controls-container"></div>
+    <div id="error-message"></div>
   </div>
-  <div id="error-message"></div>
 
   <script>
-    // The JavaScript code above goes here
+    // Configuration
+    const VIDEO_SOURCES = {
+      sss: {
+        url: "https://fta4-cdn-flr.visionplus.id/out/v1/6f5596513af749c19d0bcdac013dda3c/index.mpd",
+        drm: "7faf299c35d84c57ba6cf3578df1e0cc:636537eab0d3f7c395721811fd3861c5"
+      }
+      // Add more sources as needed
+    };
+
+    // Main initialization
+    document.addEventListener('DOMContentLoaded', initPlayer);
+
+    async function initPlayer() {
+      try {
+        const videoData = getVideoDataFromURL();
+        if (!videoData) return;
+        
+        await initializeShakaPlayer(videoData);
+      } catch (error) {
+        showError(error.message);
+        console.error("Initialization error:", error);
+      }
+    }
+
+    // Get video data based on URL parameter
+    function getVideoDataFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get("id");
+
+      if (!id || !VIDEO_SOURCES[id]) {
+        showError(`Content ID not found: ${id || "null"}`);
+        return null;
+      }
+
+      return VIDEO_SOURCES[id];
+    }
+
+    // Initialize Shaka Player
+    async function initializeShakaPlayer(videoData) {
+      // Install polyfills
+      shaka.polyfill.installAll();
+      
+      // Check browser support
+      if (!shaka.Player.isBrowserSupported()) {
+        throw new Error("Your browser doesn't support the required playback features");
+      }
+
+      const videoElement = document.getElementById('video');
+      const player = new shaka.Player(videoElement);
+      const ui = new shaka.ui.Overlay(player, videoElement, document.getElementById('controls-container'));
+
+      // Configure error handling
+      player.addEventListener('error', handlePlayerError);
+
+      // Configure DRM
+      configureDrm(player, videoData.drm);
+
+      // Load the video
+      await player.load(videoData.url);
+      console.log("Video loaded successfully");
+    }
+
+    // Configure DRM settings
+    function configureDrm(player, drmString) {
+      const [keyId, key] = drmString.split(':');
+      
+      player.configure({
+        drm: {
+          clearKeys: {
+            [keyId]: key
+          }
+        },
+        streaming: {
+          bufferingGoal: 60,
+          rebufferingGoal: 2
+        }
+      });
+    }
+
+    // Handle player errors
+    function handlePlayerError(event) {
+      const error = event.detail;
+      showError(`Playback error (${error.code}): ${error.message}`);
+      console.error("Player error:", error);
+    }
+
+    // Display error messages
+    function showError(message) {
+      const errorElement = document.getElementById('error-message');
+      errorElement.innerHTML = `
+        <h2>Error Loading Content</h2>
+        <p>${message}</p>
+        <p>Please try again or contact support.</p>
+      `;
+      errorElement.style.display = 'block';
+    }
   </script>
 </body>
 </html>
