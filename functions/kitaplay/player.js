@@ -53,6 +53,7 @@ export async function onRequest(context) {
     }
     document.addEventListener('shaka-ui-loaded', function() {
       initializePlayer("ss22", "https://fta4-cdn-flr.visionplus.id/out/v1/00f8003079de4928bca50fe7c346b6ab/index.mpd", "5d5d9e0bb2cd4cd8954a894fd4377b6f:8c08b699ff6bff8e34ac518b334bafc2", true);
+      initializePlayer("sss", "https://fta4-cdn-flr.visionplus.id/out/v1/00f8003079de4928bca50fe7c346b6ab/index.mpd", "7faf299c35d84c57ba6cf3578df1e0cc:636537eab0d3f7c395721811fd3861c5", true);
     });
   </script>
 </body>
