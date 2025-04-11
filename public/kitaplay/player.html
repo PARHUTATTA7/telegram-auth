@@ -1,1 +1,39 @@
-<!DOCTYPE html><video id="video" autoplay muted controls></video>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Shaka Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.3.5/dist/shaka-player.ui.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.3.5/dist/controls.min.css">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: black;
+      color: white;
+    }
+    #video-container {
+      width: 100%;
+      height: 80vh;
+      position: relative;
+    }
+    #error-message {
+      color: red;
+      padding: 20px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="video-container">
+    <video id="video" autoplay controls></video>
+    <div id="controls-container"></div>
+  </div>
+  <div id="error-message"></div>
+
+  <script>
+    // The JavaScript code above goes here
+  </script>
+</body>
+</html>
