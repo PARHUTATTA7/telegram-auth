@@ -1,126 +1,91 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kitaplay Player</title>
 
-  <!-- Shaka Player -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.12.5/controls.min.css" crossorigin="anonymous">
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.12.5/controls.min.css" crossorigin="anonymous"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.12.5/shaka-player.compiled.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.12.5/shaka-player.ui.min.js" crossorigin="anonymous"></script>
-
-  <!-- Custom ratio / captos -->
   <script src="https://shaka.pisionpluss3.workers.dev/xplay/rasio.js"></script>
-  <script src="https://pidio.pages.dev/player/captos.js"></script>
-
+  <link href="https://unpkg.com/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">  
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: black;
-      height: 100%;
-      overflow: hidden;
-    }
-    video {
-      width: 100% !important;
-      height: 100% !important;
-    }
-    #player-container {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-    }
+    body { margin:0; background-color: #000; color: #aaa; font-family: Poppins, sans-serif; }
+    #vidio { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
   </style>
 </head>
 <body oncontextmenu="return false" onkeydown="return false" onmousedown="return false">
-
-  <div id="player-container" data-shaka-player-container>
-    <video autoplay data-shaka-player id="xystv" poster=""></video>
+  <div id="vidio" data-shaka-player-container class="fit">
+    <video autoplay data-shaka-player id="xystv" style="width:100%;height:100%;"></video>
   </div>
 
   <script>
-    const sourceMap = {
-      'sss': {
-        url: 'https://fta4-cdn-flr.visionplus.id/out/v1/6f5596513af749c19d0bcdac013dda3c/index.mpd',
-        drm: '7faf299c35d84c57ba6cf3578df1e0cc:636537eab0d3f7c395721811fd3861c5'
+    function getUrlParameter(name) {
+      name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+      var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+      var results = regex.exec(location.search);
+      return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+    }
+
+    const videoId = getUrlParameter('id');
+    const video = document.getElementById('xystv');
+    if (videoId) video.id = videoId;
+
+    const videoMapping = {
+      "ss12": {
+        url: "https://fta4-cdn-flr.visionplus.id/out/v1/00f8003079de4928bca50fe7c346b6ab/index.mpd",
+        key: "5d5d9e0bb2cd4cd8954a894fd4377b6f:8c08b699ff6bff8e34ac518b334bafc2"
       },
-      'ss12': {
-        url: 'http/out/v1/89a6e4261cd7470f83e5869e90440cff/index.mpd',
-        drm: 'c63bd00e9ef14685be580fe5354b0e15:11838c8388010a9e72115f164226e97e'
+      "ss22": {
+        url: "https://example.com/video2.mpd",
+        key: "5d5d9e0bb2cd4cd8954a894fd4377b6f:8c08b699ff6bff8e34ac518b334bafc2"
       },
-      'ss22': {
-        url: 'https://fta4-cdn-flr.visionplus.id/out/v1/00f8003079de4928bca50fe7c346b6ab/index.mpd',
-        drm: '5d5d9e0bb2cd4cd8954a894fd4377b6f:8c08b699ff6bff8e34ac518b334bafc2'
+      "sss": {
+        url: "https://fta4-cdn-flr.visionplus.id/out/v1/6f5596513af749c19d0bcdac013dda3c/index.mpd",
+        key: "7faf299c35d84c57ba6cf3578df1e0cc:636537eab0d3f7c395721811fd3861c5"
       }
     };
 
-    async function initializePlayer(id, url, drmKeys, enableCustomConfig) {
+    async function initializePlayer(id, url, drmKeys) {
       const video = document.getElementById(id);
-      if (!video) return console.error(`Video element with ID '${id}' not found.`);
+      if (!video) return console.error("Video element not found");
 
-      const ui = video['ui'];
-      if (!ui) return console.error(`Shaka UI not found on video element with ID '${id}'.`);
+      const ui = video["ui"];
+      if (!ui) return console.error("Shaka UI not found");
 
       const controls = ui.getControls();
       const player = controls.getPlayer();
 
-      const config = {
-        controlPanelElements: [
-          'play_pause', 'time_and_duration', 'playback_rate',
-          'mute', 'spacer', 'captions', 'language', 'quality', 'fullscreen'
-        ],
-        playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2],
+      ui.configure({
+        controlPanelElements: ["play_pause", "time_and_duration", "mute", "fullscreen"],
+        playbackRates: [0.5, 1, 1.5, 2],
         seekBarColors: {
-          base: 'rgba(255,255,255,.2)',
-          buffered: 'rgba(255,255,255,.4)',
-          played: 'rgb(255,0,0)'
+          base: "rgba(255,255,255,.2)",
+          buffered: "rgba(255,255,255,.4)",
+          played: "rgb(255,0,0)"
         }
-      };
-
-      ui.configure(config);
+      });
 
       const drmKeyObj = {};
-      drmKeys.split(';').forEach(pair => {
-        const [key, value] = pair.trim().split(':');
+      drmKeys.split(";").forEach(pair => {
+        const [key, value] = pair.split(":");
         if (key && value) drmKeyObj[key.trim()] = value.trim();
       });
 
       player.configure({ drm: { clearKeys: drmKeyObj } });
 
-      if (enableCustomConfig) {
-        player.configure('manifest.dash.ignoreMinBufferTime', true);
-        player.configure('streaming.rebufferingGoal', 3);
-      }
-
-      player.addEventListener('error', e => console.error('Player Error:', e.detail));
-      controls.addEventListener('error', e => console.error('UI Error:', e.detail));
-
       try {
         await player.load(url);
-        console.log('Video loaded!');
-      } catch (error) {
-        console.error('Error loading video:', error);
+        console.log("Video loaded!");
+      } catch (e) {
+        console.error("Load failed", e);
       }
     }
 
-    document.addEventListener('shaka-ui-loaded', () => {
-      const idParam = new URLSearchParams(window.location.search).get('id');
-      if (!idParam) {
-        console.error('No ?id= provided');
-        return;
+    document.addEventListener("shaka-ui-loaded", () => {
+      if (videoId && videoMapping[videoId]) {
+        const { url, key } = videoMapping[videoId];
+        initializePlayer(videoId, url, key);
       }
-
-      const source = sourceMap[idParam];
-      if (!source) {
-        console.error('Invalid ID');
-        return;
-      }
-
-      document.getElementById('xystv').id = idParam;
-      initializePlayer(idParam, source.url, source.drm, true);
     });
   </script>
 </body>
