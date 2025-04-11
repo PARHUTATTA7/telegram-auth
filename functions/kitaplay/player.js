@@ -1,3 +1,11 @@
+document.addEventListener('DOMContentLoaded', function () {
+    shaka.polyfill.installAll();
+    if (shaka.Player.isBrowserSupported()) {
+        // Inisialisasi player di sini
+    } else {
+        console.error('Browser tidak mendukung Shaka Player');
+    }
+});
 async function initializePlayer(id, url, drmKeys, enableCustomConfig = false) {
     const video = document.getElementById(id);
     if (!video) {
