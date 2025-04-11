@@ -5,8 +5,8 @@ export async function onRequest(context) {
 
   const streams = {
     sss: {
-      url: "https://fta4-cdn-flr.visionplus.id/out/v1/6f5596513af749c19d0bcdac013dda3c/index.mpd",
-      drm: "7faf299c35d84c57ba6cf3578df1e0cc:636537eab0d3f7c395721811fd3861c5"
+      url: "http://video.beeline.tv/live/d/channel317.isml/manifest-stb.mpd",
+      drm: "5e1c798b16d24dc8cbfc7819abf77b4d:4ba5d9aeba2239b425d1cf7b45474333"
     },
     ss22: {
       url: "https://fta4-cdn-flr.visionplus.id/out/v1/00f8003079de4928bca50fe7c346b6ab/index.mpd",
