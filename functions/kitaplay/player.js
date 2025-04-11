@@ -1,0 +1,66 @@
+export async function onRequest(context) {
+  const { searchParams } = new URL(context.request.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return new Response("Missing 'id' parameter", { status: 400 });
+  }
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Kitaplay Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.3.5/dist/shaka-player.ui.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shaka-player@4.3.5/dist/controls.css">
+  <style>
+    body { margin: 0; background: black; }
+    video { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <video id="ss22" autoplay controls class="shaka-video" style="width:100%;height:100%;"></video>
+  <script type="text/javascript">
+    async function initializePlayer(id, url, drmKeys, enableCustomConfig) {
+        const video = document.getElementById(id);
+        if (!video) return console.error("Video element not found");
+        const ui = video['ui'];
+        if (!ui) return console.error("Shaka UI not found");
+        const controls = ui.getControls();
+        const player = controls.getPlayer();
+        const config = {
+          controlPanelElements: ['play_pause', 'time_and_duration', 'playback_rate', 'mute', 'spacer', 'captions', 'language', 'quality', 'fullscreen'],
+          playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2],
+          seekBarColors: { base: 'rgba(255,255,255,.2)', buffered: 'rgba(255,255,255,.4)', played: 'rgb(255,0,0)' }
+        };
+        ui.configure(config);
+        const drmKeyObj = {};
+        drmKeys.split(';').forEach(pair => {
+          const [k, v] = pair.trim().split(':');
+          if (k && v) drmKeyObj[k.trim()] = v.trim();
+        });
+        player.configure({ drm: { clearKeys: drmKeyObj } });
+        if (enableCustomConfig) {
+          player.configure('manifest.dash.ignoreMinBufferTime', true);
+          player.configure('streaming.rebufferingGoal', 3);
+        }
+        try {
+          await player.load(url);
+          console.log("Loaded!");
+        } catch (e) {
+          console.error("Error loading:", e);
+        }
+    }
+    document.addEventListener('shaka-ui-loaded', function() {
+      initializePlayer("ss22", "https://fta4-cdn-flr.visionplus.id/out/v1/00f8003079de4928bca50fe7c346b6ab/index.mpd", "5d5d9e0bb2cd4cd8954a894fd4377b6f:8c08b699ff6bff8e34ac518b334bafc2", true);
+    });
+  </script>
+</body>
+</html>`;
+
+  return new Response(html, {
+    headers: {
+      "content-type": "text/html;charset=UTF-8",
+    },
+  });
+}
