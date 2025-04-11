@@ -1,4 +1,4 @@
-@ -10,53 +10,56 @@ document.addEventListener('shaka-ui-loaded', function () {
+addEventListener('shaka-ui-loaded', function () {
    };
  
    if (sources[id]) {
