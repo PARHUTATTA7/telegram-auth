@@ -49,95 +49,141 @@
         url: "https://fta4-cdn-flr.visionplus.id/out/v1/6f5596513af749c19d0bcdac013dda3c/index.mpd",
         drm: "7faf299c35d84c57ba6cf3578df1e0cc:636537eab0d3f7c395721811fd3861c5"
       }
-      // Add more sources as needed
     };
 
     // Main initialization
-    document.addEventListener('DOMContentLoaded', initPlayer);
-
-    async function initPlayer() {
+    document.addEventListener('DOMContentLoaded', async () => {
       try {
         const videoData = getVideoDataFromURL();
         if (!videoData) return;
         
         await initializeShakaPlayer(videoData);
       } catch (error) {
-        showError(error.message);
+        showError(error.message || 'Unknown error occurred');
         console.error("Initialization error:", error);
       }
-    }
+    });
 
-    // Get video data based on URL parameter
     function getVideoDataFromURL() {
-      const params = new URLSearchParams(window.location.search);
-      const id = params.get("id");
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get("id");
 
-      if (!id || !VIDEO_SOURCES[id]) {
-        showError(`Content ID not found: ${id || "null"}`);
+        if (!id) {
+          showError("No video ID specified in URL");
+          return null;
+        }
+
+        if (!VIDEO_SOURCES[id]) {
+          showError(`Video source not found for ID: ${id}`);
+          return null;
+        }
+
+        // Validate DRM format
+        if (!VIDEO_SOURCES[id].drm || !VIDEO_SOURCES[id].drm.includes(':')) {
+          showError("Invalid DRM configuration");
+          return null;
+        }
+
+        return VIDEO_SOURCES[id];
+      } catch (error) {
+        showError("Error processing URL parameters");
+        console.error("URL processing error:", error);
         return null;
       }
-
-      return VIDEO_SOURCES[id];
     }
 
-    // Initialize Shaka Player
     async function initializeShakaPlayer(videoData) {
-      // Install polyfills
-      shaka.polyfill.installAll();
-      
-      // Check browser support
-      if (!shaka.Player.isBrowserSupported()) {
-        throw new Error("Your browser doesn't support the required playback features");
-      }
-
-      const videoElement = document.getElementById('video');
-      const player = new shaka.Player(videoElement);
-      const ui = new shaka.ui.Overlay(player, videoElement, document.getElementById('controls-container'));
-
-      // Configure error handling
-      player.addEventListener('error', handlePlayerError);
-
-      // Configure DRM
-      configureDrm(player, videoData.drm);
-
-      // Load the video
-      await player.load(videoData.url);
-      console.log("Video loaded successfully");
-    }
-
-    // Configure DRM settings
-    function configureDrm(player, drmString) {
-      const [keyId, key] = drmString.split(':');
-      
-      player.configure({
-        drm: {
-          clearKeys: {
-            [keyId]: key
-          }
-        },
-        streaming: {
-          bufferingGoal: 60,
-          rebufferingGoal: 2
+      try {
+        // Verify Shaka Player is available
+        if (typeof shaka === 'undefined') {
+          throw new Error("Shaka Player library failed to load");
         }
-      });
+
+        shaka.polyfill.installAll();
+        
+        if (!shaka.Player.isBrowserSupported()) {
+          throw new Error("Your browser doesn't support the required playback features");
+        }
+
+        const videoElement = document.getElementById('video');
+        if (!videoElement) {
+          throw new Error("Video element not found");
+        }
+
+        const player = new shaka.Player(videoElement);
+        const ui = new shaka.ui.Overlay(
+          player, 
+          videoElement, 
+          document.getElementById('controls-container')
+        );
+
+        player.addEventListener('error', (event) => {
+          handlePlayerError(event.detail);
+        });
+
+        // Configure with validation
+        const drmParts = videoData.drm.split(':');
+        if (drmParts.length !== 2) {
+          throw new Error("Invalid DRM key format");
+        }
+
+        player.configure({
+          drm: {
+            clearKeys: {
+              [drmParts[0]]: drmParts[1]
+            }
+          },
+          streaming: {
+            bufferingGoal: 60,
+            rebufferingGoal: 2
+          }
+        });
+
+        // Verify the URL is valid before loading
+        if (!videoData.url || typeof videoData.url !== 'string') {
+          throw new Error("Invalid video URL");
+        }
+
+        await player.load(videoData.url);
+        console.log("Video loaded successfully");
+      } catch (error) {
+        throw error; // Re-throw for outer catch block
+      }
     }
 
-    // Handle player errors
-    function handlePlayerError(event) {
-      const error = event.detail;
-      showError(`Playback error (${error.code}): ${error.message}`);
+    function handlePlayerError(error) {
+      let errorMessage = `Playback error (${error.code || 'unknown'}): `;
+      
+      switch (error.code) {
+        case shaka.util.Error.Code.BAD_DRM_CONFIG:
+          errorMessage += "DRM configuration error";
+          break;
+        case shaka.util.Error.Code.REQUESTED_KEY_SYSTEM_CONFIG_UNAVAILABLE:
+          errorMessage += "DRM system not available";
+          break;
+        default:
+          errorMessage += error.message || "Unknown playback error";
+      }
+      
+      showError(errorMessage);
       console.error("Player error:", error);
     }
 
-    // Display error messages
     function showError(message) {
-      const errorElement = document.getElementById('error-message');
-      errorElement.innerHTML = `
-        <h2>Error Loading Content</h2>
-        <p>${message}</p>
-        <p>Please try again or contact support.</p>
-      `;
-      errorElement.style.display = 'block';
+      try {
+        const errorElement = document.getElementById('error-message');
+        if (errorElement) {
+          errorElement.innerHTML = `
+            <h2>Error Loading Content</h2>
+            <p>${message}</p>
+            <p>Please try again or contact support.</p>
+          `;
+          errorElement.style.display = 'block';
+        }
+      } catch (e) {
+        console.error("Error displaying error message:", e);
+      }
     }
   </script>
 </body>
