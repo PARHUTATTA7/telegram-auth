@@ -1,23 +1,20 @@
+document.addEventListener('shaka-ui-loaded', function () {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
 
-export async function onRequest(context) {
-  const { searchParams } = new URL(context.request.url);
-  const id = searchParams.get("id");
-
-  const streams = {
+  const sources = {
     sss: {
       url: "https://fta4-cdn-flr.visionplus.id/out/v1/6f5596513af749c19d0bcdac013dda3c/index.mpd",
       drm: "7faf299c35d84c57ba6cf3578df1e0cc:636537eab0d3f7c395721811fd3861c5"
-    },
-    ss22: {
-      url: "https://fta4-cdn-flr.visionplus.id/out/v1/00f8003079de4928bca50fe7c346b6ab/index.mpd",
-      drm: "5d5d9e0bb2cd4cd8954a894fd4377b6f:8c08b699ff6bff8e34ac518b334bafc2"
     }
   };
 
-  const data = streams[id];
-  if (!data) {
-    return new Response("Invalid or missing ID", { status: 404 });
+  if (sources[id]) {
+    initializePlayer("video", sources[id].url, sources[id].drm, true);
+  } else {
+    console.error("ID tidak ditemukan:", id);
   }
+});
 
   const html = `
     <!DOCTYPE html>
