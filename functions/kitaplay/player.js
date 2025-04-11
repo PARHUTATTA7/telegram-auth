@@ -6,13 +6,6 @@ document.addEventListener('DOMContentLoaded', function () {
         console.error('Browser tidak mendukung Shaka Player');
     }
 });
-async function initializePlayer(id, url, drmKeys, enableCustomConfig = false) {
-    const video = document.getElementById(id);
-    if (!video) {
-        console.error(`Video element with ID '${id}' not found.`);
-        return;
-    }
-
     // Buat overlay jika belum ada
     const container = video.parentElement || document.body;
     const overlay = new shaka.ui.Overlay(new shaka.Player(video), video, container);
