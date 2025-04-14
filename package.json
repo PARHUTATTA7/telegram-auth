@@ -1,8 +1,0 @@
-{
-  "name": "kitaplay-project",
-  "version": "1.0.0",
-  "description": "Cloudflare Pages + Functions project for kitaplay",
-  "scripts": {
-    "start": "wrangler pages dev public --functions=functions"
-  }
-}
