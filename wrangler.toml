@@ -1,8 +1,0 @@
-name = "kitaplay"
-compatibility_date = "2024-04-11"
-
-[site]
-bucket = "./public"
-
-[functions]
-directory = "./functions"
